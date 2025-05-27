@@ -5,19 +5,24 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 
 public abstract class SemanticApiClient {
-    ArrayList<String> words;
-    HashMap<String, String> wordsId;
+    ArrayList<String> words, lemmas, wordsId;
     List<String> urls;
 
-    SemanticApiClient(ArrayList<String> words) {
-        this.words = words;
-        wordsId = new HashMap<>();
+    SemanticApiClient(TextProcessor textProcessor) {
+        this.words = textProcessor.getStringTokens();
+        this.lemmas = new ArrayList<>(Arrays.asList(textProcessor.getLemmas()));
+        for (int i = 0; i < lemmas.size(); i++) {
+            lemmas.set(i, lemmas.get(i) == null ? words.get(i) : lemmas.get(i));
+        }
+
+        wordsId = new ArrayList<>();
     }
 
     protected List<HttpResponse<String>> sendHttpRequests(List<String> urls) throws CancellationException, ExecutionException, InterruptedException {

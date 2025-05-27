@@ -12,27 +12,28 @@ import java.util.stream.Collectors;
 
 public class ConceptNetApiClient extends SemanticApiClient {
 
-    ConceptNetApiClient(ArrayList<String> words) throws ExecutionException, InterruptedException {
-        super(words);
-        urls = super.words.stream().map(this::getApiUrl).collect(Collectors.toList());
+    ConceptNetApiClient(TextProcessor textProcessor) throws ExecutionException, InterruptedException {
+        super(textProcessor);
+        urls = lemmas.stream().map(this::getApiUrl).collect(Collectors.toList());
 
         List<HttpResponse<String>> responses = sendHttpRequests(urls);
-
         JSONObject[] jsonObjects = responses.stream().map(response -> JSONValue.parse(response.body())).toArray(JSONObject[]::new);
 
         ListIterator<JSONObject> iterator = List.of(jsonObjects).listIterator();
-        while (iterator.hasNext()) {
-            int index = iterator.nextIndex();
-            wordsId.putIfAbsent(words.get(index), getUriId(iterator.next()));
-        }
+//        while (iterator.hasNext()) {
+//            wordsId.add(getUriId(iterator.next()));
+//        }
 
-        for (String word : wordsId.keySet()) {
-            System.out.println(word + ' ' + wordsId.get(word));
+        for (int i = 0; i < wordsId.size(); i++) {
+            System.out.println(wordsId.get(i) + " " + lemmas.get(i));
         }
     }
 
-    private String getUriId(JSONObject jsonObject) {
-        return jsonObject.get("@id").toString();
+    private String getUriId(JSONObject jsonObject, String POSTag) {
+        if (POSTag != null) {
+            return jsonObject.get("@id").toString();
+        }
+        return jsonObject.get("id").toString();
     }
 
     @Override

@@ -31,6 +31,27 @@
             <artifactId>graphdb-runtime</artifactId>
             <version>10.8.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.opennlp</groupId>
+            <artifactId>opennlp-tools</artifactId>
+            <version>2.5.3</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.semlink</groupId>
+            <artifactId>verbnet</artifactId>
+            <version>0.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>edu.stanford.nlp</groupId>
+            <artifactId>stanford-corenlp</artifactId>
+            <version>4.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>edu.stanford.nlp</groupId>
+            <artifactId>stanford-corenlp</artifactId>
+            <version>4.4.0</version>
+            <classifier>models</classifier>
+        </dependency>
 
     </dependencies>
 
