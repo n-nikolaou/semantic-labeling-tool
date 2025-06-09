@@ -1,0 +1,91 @@
+@prefix ex: <http://example.org/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+ex:Token a owl:Class ;
+         rdfs:label "Text token" .
+
+ex:Verb a owl:Class ;
+        rdfs:subClassOf ex:Token ;
+        rdfs:label "Verb" .
+
+ex:hasThematicRole a rdf:Property ;
+                   rdfs:domain ex:Verb ;
+                   rdfs:range ex:ThematicRole .
+
+ex:hasLemma a rdf:Property ;
+            rdfs:domain ex:Token ;
+            rdfs:range xsd:string .
+
+ex:word a rdf:Property ;
+        rdfs:domain ex:Token ;
+        rdfs:range xsd:string .
+
+ex:hasPartOfSpeech a rdf:Property  ;
+                   rdfs:domain ex:Token ;
+                   rdfs:range xsd:string .
+
+ex:hasNamedEntityRecognition a rdf:Property  ;
+                             rdfs:domain ex:Token ;
+                             rdfs:range xsd:string .
+
+ex:hasRole a rdf:Property ;
+           rdfs:domain ex:Token ;
+           rdfs:range ex:ThematicRole .
+
+ex:ThematicRole a owl:Class ;
+                rdfs:label "Thematic role" .
+
+ex:thematicType a rdf:Property ;
+        rdfs:domain ex:ThematicRole ;
+        rdfs:range xsd:string .
+
+ex:token a rdf:Property ;
+         rdfs:domain ex:ThematicRole ;
+         rdfs:range ex:Token .
+
+ex:hasPredicate a rdf:Property ;
+                rdfs:domain ex:Verb ;
+                rdfs:range ex:Predicate .
+
+ex:Predicate a owl:Class ;
+             rdfs:label "Verb Predicate" .
+
+ex:value a rdf:Property ;
+    rdfs:domain ex:Predicate ;
+    rdfs:range xsd:string .
+
+ex:argument a rdf:Property ;
+    rdfs:domain ex:Predicate ;
+    rdfs:range ex:SemanticArgument .
+
+ex:SemanticArgument a owl:Class ;
+    rdfs:label "Semantic Argument" .
+
+ex:argumentType a rdf:Property ;
+                rdfs:domain ex:SemanticArgument ;
+                rdfs:range xsd:string .
+
+ex:argumentValue a rdf:Property ;
+                 rdfs:domain ex:SemanticArgument ;
+                 rdfs:range [
+                                a owl:Class ;
+                                owl:unionOf (ex:Token xsd:string )
+                            ] .
+
+ex:hasGrammaticalRelation a rdf:Property  ;
+                          rdfs:domain ex:Token ;
+                          rdfs:range ex:GrammaticalRelation .
+
+ex:GrammaticalRelation a rdfs:Class ;
+    rdfs:label "Grammatical Relation" .
+
+ex:target a rdf:Property ;
+          rdfs:domain ex:GrammaticalRelation ;
+          rdfs:range ex:Token .
+
+ex:relation a rdf:Property ;
+            rdfs:domain ex:GrammaticalRelation ;
+            rdfs:range xsd:string .

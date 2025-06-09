@@ -1,47 +1,25 @@
 package org.example;
 
-import edu.stanford.nlp.ling.IndexedWord;
-import io.github.semlink.verbnet.semantics.VnSemanticArgument;
-import io.github.semlink.verbnet.semantics.VnSemanticPredicate;
-import it.unimi.dsi.fastutil.Hash;
+import org.example.models.IndexedWordModel;
+import org.springframework.boot.Banner;
+import org.springframework.boot.SpringApplication;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
-
-import static org.example.FrameMatcher.*;
+import java.util.*;
 
 public class Main {
-    public static void main(String[] args)  {
-        FrameMatcher.matchFrame("");
+    public static void main(String[] args) {
+        SpringApplication app = new SpringApplication(MyApplication.class);
+        app.setBannerMode(Banner.Mode.OFF); // Disable the Spring banner
+        app.run(args);
 
-        HashMap<IndexedWord, List<VnSemanticPredicate>> semanticsPerVerb = FrameMatcher.getSemanticsPerVerb();
-        for (IndexedWord verb : semanticsPerVerb.keySet()) {
-            System.out.println(verb.word() + " " + getSelectedClasses().get(verb).verbNetId());
-            ArrayList<IndexedWord> objects = getNounsPerVerb().get(verb).get("obj");
-            ArrayList<IndexedWord> subjects = getNounsPerVerb().get(verb).get("subj");
-            String roleObject = getRolesPerNoun().get(objects);
-            String roleSubject = getRolesPerNoun().get(subjects);
+        VerbNetAdapter adapter = new VerbNetAdapter("Dr. Rodriguez published a paper in Nature Journal from MIT about using CRISPR-Cas9 to edit genomes while Pfizer and Moderna were developing mRNA vaccines for COVID-19 during the pandemic that the WHO declared in March 2020 for 10 minutes in the 10 percent of his time. He appreciates his science in Greece for 300 euros.");
 
-            System.out.println(roleObject + " " + objects);
-            System.out.println(roleSubject + " " + subjects);
+        ArrayList<IndexedWordModel> indexedWordModels = adapter.getIndexedWordModels();
+//        for (IndexedWordModel indexedWordModel : indexedWordModels) {
+//            System.out.println(indexedWordModel);
+//        }
 
-
-            for (VnSemanticPredicate verbPredicate : semanticsPerVerb.get(verb)) {
-                System.out.println("  " + verbPredicate.type());
-                for (VnSemanticArgument semanticArgument : verbPredicate.semanticArguments()) {
-                    ArrayList<IndexedWord> nouns = semanticArgument.value().equals(roleObject)
-                            ? objects
-                            : semanticArgument.value().equals(roleSubject) ? subjects : null;
-                    if (nouns != null || !Objects.equals(semanticArgument.type(), "ThemRole")) {
-                        System.out.println("    " + semanticArgument.type() + " " + ((nouns != null) ? nouns : semanticArgument.value()));
-                    }
-                }
-            }
-        }
-
-//        BabelNetApiClient babelNetApiClient = new BabelNetApiClient(textProcessor);
-//        ConceptNetApiClient conceptNetApiClient = new ConceptNetApiClient(textProcessor);
+        GraphDBMapper mapper = new GraphDBMapper(adapter);
     }
+
 }
