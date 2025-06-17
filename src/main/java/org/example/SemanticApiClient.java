@@ -1,5 +1,7 @@
 package org.example;
 
+import org.example.models.IndexedWordModel;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -10,19 +12,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public abstract class SemanticApiClient {
-    ArrayList<String> words, lemmas, wordsId;
+    List<String> lemmas, wordsId = new ArrayList<>();
+    ArrayList<IndexedWordModel> words;
     List<String> urls;
 
-    SemanticApiClient(TextProcessor textProcessor) {
-        this.words = textProcessor.getStringTokens();
-        this.lemmas = new ArrayList<>(Arrays.asList(textProcessor.getLemmas()));
-        for (int i = 0; i < lemmas.size(); i++) {
-            lemmas.set(i, lemmas.get(i) == null ? words.get(i) : lemmas.get(i));
-        }
-
-        wordsId = new ArrayList<>();
+    SemanticApiClient(VerbNetAdapter verbNetAdapter) {
+        this.words = verbNetAdapter.getIndexedWordModels();
+        words.sort((a, b) -> a.index > b.index ? 1 : -1);
+        this.lemmas = words.stream().map(word -> word.lemma).collect(Collectors.toList());
     }
 
     protected List<HttpResponse<String>> sendHttpRequests(List<String> urls) throws CancellationException, ExecutionException, InterruptedException {

@@ -1,25 +1,45 @@
 package org.example;
 
+import org.apache.tomcat.util.json.JSONParserTokenManager;
 import org.example.models.IndexedWordModel;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 
+import java.net.http.HttpResponse;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ExecutionException, InterruptedException, ParseException {
         SpringApplication app = new SpringApplication(MyApplication.class);
         app.setBannerMode(Banner.Mode.OFF); // Disable the Spring banner
         app.run(args);
 
-        VerbNetAdapter adapter = new VerbNetAdapter("Dr. Rodriguez published a paper in Nature Journal from MIT about using CRISPR-Cas9 to edit genomes while Pfizer and Moderna were developing mRNA vaccines for COVID-19 during the pandemic that the WHO declared in March 2020 for 10 minutes in the 10 percent of his time. He appreciates his science in Greece for 300 euros.");
 
-        ArrayList<IndexedWordModel> indexedWordModels = adapter.getIndexedWordModels();
+//
+//        BabelNetApiClient babelNetApiClient = new BabelNetApiClient(adapter);
+//        ConceptNetApiClient conceptNetApiClient = new ConceptNetApiClient(adapter);
+//
+//        ArrayList<String> babelURLs = new ArrayList<>(), conceptURLs = new ArrayList<>();
 //        for (IndexedWordModel indexedWordModel : indexedWordModels) {
-//            System.out.println(indexedWordModel);
+//            babelURLs.add(babelNetApiClient.getApiUrl(indexedWordModel.lemma));
+//            conceptURLs.add(conceptNetApiClient.getApiUrl(indexedWordModel.lemma));
 //        }
-
-        GraphDBMapper mapper = new GraphDBMapper(adapter);
+//        for (HttpResponse<String> response : babelNetApiClient.sendHttpRequests(babelURLs)) {
+//            JSONArray array = (JSONArray) new JSONParser().parse(response.body());
+//            for (Object object : array) {
+//                JSONObject obj = (JSONObject) object;
+//                System.out.println(obj.toJSONString());
+//            }
+//        }
+//        for (HttpResponse<String> response : conceptNetApiClient.sendHttpRequests(conceptURLs)) {
+//            JSONObject array = (JSONObject) new JSONParser().parse(response.body());
+//            System.out.println(array.toJSONString());
+//        }
     }
 
 }

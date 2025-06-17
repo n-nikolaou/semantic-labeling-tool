@@ -11,22 +11,26 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 public class ConceptNetApiClient extends SemanticApiClient {
+    List<String> posTags;
 
-    ConceptNetApiClient(TextProcessor textProcessor) throws ExecutionException, InterruptedException {
-        super(textProcessor);
+    ConceptNetApiClient(VerbNetAdapter verbNetAdapter) throws ExecutionException, InterruptedException {
+        super(verbNetAdapter);
         urls = lemmas.stream().map(this::getApiUrl).collect(Collectors.toList());
+        posTags = words.stream().map(word -> word.posTag).collect(Collectors.toList());
 
         List<HttpResponse<String>> responses = sendHttpRequests(urls);
         JSONObject[] jsonObjects = responses.stream().map(response -> JSONValue.parse(response.body())).toArray(JSONObject[]::new);
 
-        ListIterator<JSONObject> iterator = List.of(jsonObjects).listIterator();
+//        ListIterator<JSONObject> iterator = List.of(jsonObjects).listIterator();
+//        wordsId = new ArrayList<>(posTags.size());
 //        while (iterator.hasNext()) {
-//            wordsId.add(getUriId(iterator.next()));
+//            int index = iterator.nextIndex();
+//            wordsId.add(getUriId(jsonObjects[index], posTags.get(index)));
 //        }
-
-        for (int i = 0; i < wordsId.size(); i++) {
-            System.out.println(wordsId.get(i) + " " + lemmas.get(i));
-        }
+//
+//        for (int i = 0; i < wordsId.size(); i++) {
+//            System.out.println(wordsId.get(i) + " " + lemmas.get(i));
+//        }
     }
 
     private String getUriId(JSONObject jsonObject, String POSTag) {

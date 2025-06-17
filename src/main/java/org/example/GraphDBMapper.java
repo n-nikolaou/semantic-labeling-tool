@@ -127,6 +127,11 @@ public class GraphDBMapper {
         conn.add(token, propertiesMap.get("hasLemma"), vf.createLiteral(word.lemma));
         conn.add(token, propertiesMap.get("hasPartOfSpeech"), vf.createLiteral(word.posTag));
         conn.add(token, propertiesMap.get("word"), vf.createLiteral(word.word));
+        conn.add(token, propertiesMap.get("hasIndex"), vf.createLiteral(word.index));
+
+        if (word.ner != null) {
+            conn.add(token, propertiesMap.get("hasNamedEntityRecognition"), vf.createLiteral(word.ner));
+        }
 
         for (IndexedWordModel.GrammaticalRelation relation : word.relations) {
             for (int targetIndex : relation.targetIndices) {
@@ -263,6 +268,10 @@ public class GraphDBMapper {
         conn.add(propertiesMap.get("relation"), RDF.TYPE, RDF.PROPERTY);
         conn.add(propertiesMap.get("relation"), RDFS.DOMAIN, classesMap.get("GrammaticalRelation"));
         conn.add(propertiesMap.get("relation"), RDFS.RANGE, XSD.STRING);
+
+        conn.add(propertiesMap.get("hasIndex"), RDF.TYPE, RDF.PROPERTY);
+        conn.add(propertiesMap.get("hasIndex"), RDFS.DOMAIN, classesMap.get("Token"));
+        conn.add(propertiesMap.get("hasIndex"), RDFS.RANGE, XSD.INTEGER);
     }
 
     public static void exportToTurtle(Repository repository, String outputPath) throws Exception {

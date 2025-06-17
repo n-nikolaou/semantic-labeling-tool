@@ -28,6 +28,7 @@ public class OntologyProperties {
         propertyMap.put("target", vf.createIRI(BASE, "target"));
         propertyMap.put("relation", vf.createIRI(BASE, "relation"));
         propertyMap.put("word", vf.createIRI(BASE, "word"));
+        propertyMap.put("hasIndex", vf.createIRI(BASE, "hasIndex"));
 
         return propertyMap;
     }

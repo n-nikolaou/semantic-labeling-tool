@@ -12,17 +12,19 @@ import org.example.models.SemanticArgument;
 import org.example.models.VerbDetails;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 import static org.example.VerbNetSemanticParser.*;
-import static org.example.VerbNetSemanticParser.extractNounRelations;
 
 public class VerbNetAdapter {
     String input;
     ArrayList<IndexedWordModel> indexedWordModels = new ArrayList<>();
 
-    VerbNetAdapter(String input) {
+    public VerbNetAdapter(String input) {
         this.input = input;
+    }
 
+    public void mapWordsToModels() {
         CoreDocument document = annotateText(input);
 
         HashSet<IndexedWord> verbs = extractVerbs();
@@ -52,6 +54,7 @@ public class VerbNetAdapter {
             HashMap<CoreLabel, String[]> entityMentions = extractEntityMentions();
             if (entityMentions.containsKey(token)) {
                 word.ner = entityMentions.get(token)[0];
+                System.out.println(word.ner);
             }
 
             Optional<IndexedWord> foundVerb = verbs.stream().filter(
@@ -130,7 +133,6 @@ public class VerbNetAdapter {
 
                 word.relations = relations.toArray(new IndexedWordModel.GrammaticalRelation[relations.size()]);
             }
-
         }
     }
 

@@ -4,8 +4,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import edu.stanford.nlp.ling.CoreLabel;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class IndexedWordModel {
     public Integer index;
@@ -22,6 +25,8 @@ public class IndexedWordModel {
     public IndexedWordModel(CoreLabel token) {
         this.token = token;
     }
+
+    public IndexedWordModel() {}
 
     public static class GrammaticalRelation {
         public int[] targetIndices;
@@ -84,5 +89,26 @@ public class IndexedWordModel {
         return Objects.hash(index, word, lemma, posTag, ner,
                 Arrays.hashCode(relations),
                 verbDetails);
+    }
+
+    public static class IndexedWords extends ArrayList<IndexedWordModel> {
+        private static ArrayList<IndexedWordModel> words = new ArrayList<>();
+        IndexedWords(ArrayList<IndexedWordModel> words) {
+            IndexedWords.words = words;
+        }
+
+        public static IndexedWordModel findIndexedWordByIndex(int index) {
+            for (IndexedWordModel indexedWordModel : words) {
+                if (indexedWordModel.index == index) {
+                    return indexedWordModel;
+                }
+            }
+
+            return null;
+        }
+
+        public static List<IndexedWordModel> findIndexedWordsByIndex(ArrayList<Integer> indices) {
+            return words.stream().filter(word -> indices.contains(word.index)).toList();
+        }
     }
 }

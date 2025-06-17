@@ -1,90 +1,234 @@
 package org.example.services;
 
-import edu.stanford.nlp.ling.CoreLabel;
-import edu.stanford.nlp.ling.IndexedWord;
-import edu.stanford.nlp.pipeline.CoreDocument;
-import edu.stanford.nlp.pipeline.CoreSentence;
+import org.apache.http.client.fluent.Response;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.util.Values;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.TupleQuery;
+import org.eclipse.rdf4j.query.TupleQueryResult;
+import org.eclipse.rdf4j.repository.RepositoryConnection;
+import org.example.GraphDBMapper;
+import org.example.VerbNetAdapter;
 import org.example.models.IndexedWordModel;
+import org.example.models.SemanticArgument;
+import org.example.models.VerbDetails;
+import org.json.simple.JSONArray;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
-import static org.example.VerbNetSemanticParser.*;
+import static org.example.models.IndexedWordModel.IndexedWords.findIndexedWordsByIndex;
 
 @Service
 public class ApiService {
+    private final RepositoryConnection connection;
+    private final Map<String, String> jobResults = new ConcurrentHashMap<>();
 
-    public IndexedWordModel[] getIndexedWords() {
-        if (isAnalysisComplete()) {
-            CoreDocument document = annotateText("");
-            HashSet<IndexedWord> verbs = extractVerbs();
-            HashMap<IndexedWord, HashMap<String, ArrayList<IndexedWord>>> nounsPerVerb = extractNounsRelations(verbs);
+    @Autowired
+    public ApiService(RepositoryConnection connection) {
+        this.connection = connection;
+    }
 
-            int wordsIndex = 0;
+    public ArrayList<IndexedWordModel> getIndexedWords() {
+        System.out.println("getIndexedWords");
+        String queryString =
+                """
+                PREFIX ex: <http://example.org/>
+                SELECT ?index ?lemma ?partOfSpeech ?word ?ner
+                WHERE {
+                  ?token a ex:Token .
+                  ?token ex:hasIndex ?index .
+                  ?token ex:hasLemma ?lemma .
+                  ?token ex:hasPartOfSpeech ?partOfSpeech .
+                  ?token ex:word ?word .
+                  OPTIONAL {
+                    ?token ex:hasNamedEntityRecognition ?ner .
+                  }
+                }
+                """;
 
-            for (int i = 0; i < document.sentences().size(); i++) {
-                CoreSentence sentence = document.sentences().get(i);
+        TupleQuery query = connection.prepareTupleQuery(queryString);
 
-                for (int j = 0; j < sentence.tokens().size(); j++) {
-                    CoreLabel token = sentence.tokens().get(j);
-                    IndexedWordModel word = new IndexedWordModel(token);
-                    word.index = wordsIndex;
-                    word.lemma = token.lemma();
-                    word.posTag = token.tag();
+        ArrayList<IndexedWordModel> words = new ArrayList<>();
+        try (TupleQueryResult result = query.evaluate()) {
+            for (BindingSet solution : result) {
+                if (solution != null) {
+                    IndexedWordModel indexedWordModel = new IndexedWordModel();
+                    indexedWordModel.index = Integer.parseInt(solution.getValue("index").stringValue());;
+                    indexedWordModel.lemma = solution.getValue("lemma").stringValue();
+                    indexedWordModel.word = solution.getValue("word").stringValue();
+                    indexedWordModel.posTag = solution.getValue("partOfSpeech").stringValue();
 
-//                    if (getEntityType().containsKey(token)) {
-//                        word.ner = getEntityType().get(token);
-//                    }
-
-                    Optional<IndexedWord> foundVerb = verbs.stream().filter(verbToFind -> verbToFind.backingLabel() == token).findFirst();
-
-                    if (foundVerb.isPresent()) {
-                        IndexedWord verb = foundVerb.get();
-
-//                        Map<Integer, String> extractedRelations = extractRelations(verb, document);
-//                        ArrayList<IndexedWordModel.GrammaticalRelation> relations = new ArrayList<>();
-//                        if (extractedRelations != null) {
-//                            for (Map.Entry<Integer, String> entry : extractedRelations.entrySet()) {
-//                                relations.add(new IndexedWordModel.GrammaticalRelation(entry.getKey(), entry.getValue()));
-//                            }
-//                        }
-//
-//                        word.relations = relations.toArray(new IndexedWordModel.GrammaticalRelation[relations.size()]);
-
-
+                    if (solution.getValue("ner") != null) {
+                        indexedWordModel.ner = solution.getValue("ner").stringValue();
                     }
 
+                    words.add(indexedWordModel);
+                }
+            }
+        }
 
-                    wordsIndex++;
+        return words;
+    }
+
+    public ArrayList<IndexedWordModel.GrammaticalRelation> getGrammaticalRelations(int sourceIndex) {
+        String queryString =
+                """
+                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX ex: <http://example.org/>
+                select ?targetIndex ?relation
+                where {
+                    ?token a ex:Token .
+                    ?token ex:hasIndex ?index .
+                    ?token ex:hasGrammaticalRelation ?grammaticalRelation .
+                    ?grammaticalRelation ex:target ?targetToken .
+                    ?targetToken ex:hasIndex ?targetIndex .
+                    ?grammaticalRelation ex:relation ?relation .""" +
+                    "FILTER(?index = " + sourceIndex + ")" +
+                "}";
+
+        TupleQuery query = connection.prepareTupleQuery(queryString);
+
+        ArrayList<IndexedWordModel.GrammaticalRelation> relations = new ArrayList<>();
+        try (TupleQueryResult result = query.evaluate()) {
+            for (BindingSet solution : result) {
+                if (solution != null) {
+                    String relation = solution.getValue("relation").stringValue();
+                    int targetIndex = Integer.parseInt(solution.getValue("targetIndex").stringValue());
+                    IndexedWordModel.GrammaticalRelation grammaticalRelation = new IndexedWordModel.GrammaticalRelation(targetIndex, relation);
+                    relations.add(grammaticalRelation);
+                }
+            }
+        }
+
+        return relations;
+    }
+
+    public IndexedWordModel getVerbDetails(IndexedWordModel verb) {
+        if (verb.ner.contains("VB") && verb.index != null && verb.index > -1) {
+            String queryString = """
+                    PREFIX ex: <http://example.org/>
+                    SELECT *
+                    WHERE {
+                        ?token a ex:Verb .
+                        ?token ex:hasIndex ?index .
+                        OPTIONAL {
+                       		?token ex:hasThematicRole ?themRole .
+                            ?themRole ex:thematicType ?themType .
+                            ?themRole ex:token ?themToken .
+                            ?themToken ex:hasIndex ?themIndex .
+                        }
+                        ?token ex:hasPredicate ?predicate .
+                        ?predicate ex:value ?value .
+                        ?predicate ex:argument ?semArg .
+                        ?semArg ex:argumentValue ?argValue .
+                        ?semArg ex:argumentType ?argType.
+                        FILTER(?index = """ + verb.index + ")\n"+
+                    "} ORDER BY ?predicate ?semArg";
+
+            TupleQuery query = connection.prepareTupleQuery(queryString);
+
+            ArrayList<VerbDetails.ThematicRole> thematicRoles = new ArrayList<>();
+            HashMap<String, SemanticArgument> semArgs = new HashMap<>();
+            HashMap<String, ArrayList<SemanticArgument.Argument>> semArgsPerPredicate = new HashMap<>();
+
+            String currentPredicateLocalName = "", currentArgumentLocalName = "";
+            SemanticArgument currentPredicate = null;
+            ArrayList<SemanticArgument.Argument> currentArguments = null;
+            ArrayList<SemanticArgument> predicates = new ArrayList<>();
+
+            try (TupleQueryResult result = query.evaluate()) {
+                for (BindingSet solution : result) {
+                    if (solution != null) {
+                        Integer indexThemToken = (solution.getValue("themIndex") != null)
+                            ? Integer.parseInt(solution.getValue("themIndex").stringValue())
+                            : null;
+
+                        if (
+                                indexThemToken != null &&
+                                !thematicRoles.stream().map(role -> role.wordIndex).toList().contains(indexThemToken)
+                        ) {
+                            VerbDetails.ThematicRole thematicRole = new VerbDetails.ThematicRole();
+                            thematicRole.wordIndex = indexThemToken;
+                            thematicRole.type = solution.getValue("themType").stringValue();
+                            thematicRoles.add(thematicRole);
+                        }
+
+                        if (
+                                Objects.equals(currentArgumentLocalName, "") ||
+                                        !Objects.equals(currentArgumentLocalName, solution.getValue("semArg").stringValue())
+                        ) {
+                            if (currentArguments != null) {
+                                currentPredicate.arguments = currentArguments.toArray(SemanticArgument.Argument[]::new);
+                            }
+
+                            if (
+                                Objects.equals(currentPredicateLocalName, "") ||
+                                !Objects.equals(currentPredicateLocalName, solution.getValue("predicate").stringValue())
+                            ) {
+                                currentArguments = new ArrayList<>();
+                            }
+
+                            currentArgumentLocalName = solution.getValue("semArg").stringValue();
+                            SemanticArgument.Argument currentArgument = new SemanticArgument.Argument();
+
+                            currentArgument.type = solution.getValue("argType").stringValue();
+                            currentArgument.value = solution.getValue("argValue").stringValue();
+
+                            currentArguments.add(currentArgument);
+                        }
+
+                        if (
+                                Objects.equals(currentPredicateLocalName, "") ||
+                                !Objects.equals(currentPredicateLocalName, solution.getValue("predicate").stringValue())
+                        ) {
+                            if (currentPredicate != null) {
+                                predicates.add(currentPredicate);
+                            }
+
+                            currentPredicateLocalName = solution.getValue("predicate").stringValue();
+                            currentPredicate = new SemanticArgument();
+
+                            currentPredicate.predicate = solution.getValue("value").stringValue();
+                        }
+                    }
                 }
             }
 
-//            HashMap<edu.stanford.nlp.ling.IndexedWord, List<VnSemanticPredicate>> semanticsPerVerb = FrameMatcher.getSemanticsPerVerb();
-//            for (edu.stanford.nlp.ling.IndexedWord verb : semanticsPerVerb.keySet()) {
-//                System.out.println(verb.word() + " " + getSelectedClasses().get(verb).verbNetId());
-//                ArrayList<edu.stanford.nlp.ling.IndexedWord> objects = getNounsPerVerb().get(verb).get("obj");
-//                ArrayList<edu.stanford.nlp.ling.IndexedWord> subjects = getNounsPerVerb().get(verb).get("subj");
-//                String roleObject = getRolesPerNoun().get(objects);
-//                String roleSubject = getRolesPerNoun().get(subjects);
-//
-//                System.out.println(roleObject + " " + objects);
-//                System.out.println(roleSubject + " " + subjects);
-//
-//
-//                for (VnSemanticPredicate verbPredicate : semanticsPerVerb.get(verb)) {
-//                    System.out.println("  " + verbPredicate.type());
-//                    for (VnSemanticArgument semanticArgument : verbPredicate.semanticArguments()) {
-//                        ArrayList<edu.stanford.nlp.ling.IndexedWord> nouns = semanticArgument.value().equals(roleObject)
-//                                ? objects
-//                                : semanticArgument.value().equals(roleSubject) ? subjects : null;
-//                        if (nouns != null || !Objects.equals(semanticArgument.type(), "ThemRole")) {
-//                            System.out.println("    " + semanticArgument.type() + " " + ((nouns != null) ? nouns : semanticArgument.value()));
-//                        }
-//                    }
-//                }
-//            }
+            if (currentPredicate != null) {
+                currentPredicate.arguments = currentArguments.toArray(SemanticArgument.Argument[]::new);
+                predicates.add(currentPredicate);
+            }
+
+            verb.verbDetails = new VerbDetails();
+            verb.verbDetails.thematicRoles = thematicRoles.toArray(VerbDetails.ThematicRole[]::new);
+            verb.verbDetails.semanticArguments = predicates.toArray(SemanticArgument[]::new);
         }
 
-        return null;
+        return verb;
+    }
+
+    @Async
+    public void processAsync(String text, String jobId) {
+        VerbNetAdapter adapter = new VerbNetAdapter(text);
+        adapter.mapWordsToModels();
+
+        String result = "ANNOTATED TEXT";
+        jobResults.put(jobId, result);
+
+        new GraphDBMapper(adapter);
+
+        result = "MAPPED TEXT TO GRAPH";
+        jobResults.put(jobId, result);
+
+    }
+
+    public String getResult(String jobId) {
+        return jobResults.get(jobId);
     }
 }
