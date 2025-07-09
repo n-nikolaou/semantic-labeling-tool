@@ -18,6 +18,11 @@ public class OntologyClasses {
         classMap.put("Predicate", vf.createIRI(BASE, "Predicate"));
         classMap.put("SemanticArgument", vf.createIRI(BASE, "SemanticArgument"));
         classMap.put("GrammaticalRelation", vf.createIRI(BASE, "GrammaticalRelation"));
+        classMap.put("Synset", vf.createIRI(BASE, "Synset"));
+        classMap.put("Edge", vf.createIRI(BASE, "Edge"));
+        classMap.put("Node", vf.createIRI(BASE, "Node"));
+        classMap.put("RelationTriple", vf.createIRI(BASE, "RelationTriple"));
+        classMap.put("Quotation", vf.createIRI(BASE, "Quotation"));
 
         return classMap;
     }

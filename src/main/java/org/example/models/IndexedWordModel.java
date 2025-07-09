@@ -4,11 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import edu.stanford.nlp.ling.CoreLabel;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.*;
 
 public class IndexedWordModel {
     public Integer index;
@@ -16,11 +12,15 @@ public class IndexedWordModel {
     @JsonProperty(required = false)
     public String ner;
     @JsonProperty(required = false)
-    public GrammaticalRelation[] relations;
-    @JsonProperty(required = false)
-    public VerbDetails verbDetails;
+    public ArrayList<GrammaticalRelation> relations;
     @JsonIgnore()
     public CoreLabel token;
+    @JsonProperty(required = false)
+    public Integer chainMentionId;
+    @JsonProperty(required = false)
+    public Integer mentionId;
+    @JsonIgnore()
+    public Quotation quotation;
 
     public IndexedWordModel(CoreLabel token) {
         this.token = token;
@@ -29,31 +29,26 @@ public class IndexedWordModel {
     public IndexedWordModel() {}
 
     public static class GrammaticalRelation {
-        public int[] targetIndices;
+        public List<Integer> targetIndices = new ArrayList<>();
         public String grammaticalRelation;
 
         public GrammaticalRelation(Integer targetIndex, String grammaticalRelation) {
-            this.targetIndices = new int[]{targetIndex};
+            this.targetIndices.add(targetIndex);
             this.grammaticalRelation = grammaticalRelation;
         }
 
-        public GrammaticalRelation(Integer[] targetIndices, String grammaticalRelation) {
-            this.targetIndices = Arrays.copyOf(
-                    Arrays.stream(targetIndices)
-                        .mapToInt(i -> i != null ? i : -1)
-                        .toArray(),
-                    targetIndices.length);
-            this.grammaticalRelation = grammaticalRelation;
+        public void addTargetIndex(int targetIndex) {
+            targetIndices.add(targetIndex);
         }
 
         @Override
         public String toString() {
-            return "Target Indices: " + Arrays.toString(targetIndices) + ", Relation: " + grammaticalRelation;
+            return "Target Indices: " + targetIndices.toString() + ", Relation: " + grammaticalRelation;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(grammaticalRelation, Arrays.hashCode(targetIndices));
+            return Objects.hash(grammaticalRelation, targetIndices);
         }
     }
 
@@ -69,16 +64,12 @@ public class IndexedWordModel {
             sb.append("NER: ").append(ner).append("\n");
         }
 
-        if (relations != null && relations.length > 0) {
+        if (relations != null && !relations.isEmpty()) {
             sb.append("Grammatical Relations:\n");
             for (GrammaticalRelation rel : relations) {
-                sb.append("  - Target Index: ").append(Arrays.toString(rel.targetIndices))
+                sb.append("  - Target Index: ").append(rel.targetIndices.toString())
                         .append(", Relation: ").append(rel.grammaticalRelation).append("\n");
             }
-        }
-
-        if (verbDetails != null) {
-            sb.append("Verb Details:\n").append(verbDetails.toString().indent(2));
         }
 
         return sb.toString();
@@ -87,28 +78,6 @@ public class IndexedWordModel {
     @Override
     public int hashCode() {
         return Objects.hash(index, word, lemma, posTag, ner,
-                Arrays.hashCode(relations),
-                verbDetails);
-    }
-
-    public static class IndexedWords extends ArrayList<IndexedWordModel> {
-        private static ArrayList<IndexedWordModel> words = new ArrayList<>();
-        IndexedWords(ArrayList<IndexedWordModel> words) {
-            IndexedWords.words = words;
-        }
-
-        public static IndexedWordModel findIndexedWordByIndex(int index) {
-            for (IndexedWordModel indexedWordModel : words) {
-                if (indexedWordModel.index == index) {
-                    return indexedWordModel;
-                }
-            }
-
-            return null;
-        }
-
-        public static List<IndexedWordModel> findIndexedWordsByIndex(ArrayList<Integer> indices) {
-            return words.stream().filter(word -> indices.contains(word.index)).toList();
-        }
+                relations);
     }
 }

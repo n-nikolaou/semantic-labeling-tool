@@ -1,15 +1,14 @@
 package org.example.controllers;
 
-import com.google.protobuf.Api;
+import org.example.models.Edge;
 import org.example.models.IndexedWordModel;
+import org.example.models.Quotation;
 import org.example.services.ApiService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:4200")
@@ -34,11 +33,26 @@ public class ApiController {
         return apiService.getGrammaticalRelations(targetIndex);
     }
 
-    @GetMapping("/verb-details")
-    public IndexedWordModel getVerbDetails(
-            @RequestBody IndexedWordModel verb
+    @GetMapping("/triple-relations/{targetIndex}")
+    public ArrayList<ArrayList<Integer>> getTripleRelations(
+            @PathVariable int targetIndex
     ) {
-        return apiService.getVerbDetails(verb);
+        return apiService.getRelationTriples(targetIndex);
+    }
+
+    @GetMapping("/get-conceptnet-edges/{targetIndex}")
+    public List<Edge> getConceptNetEdges(@PathVariable int targetIndex) {
+        return apiService.getConceptNetEdges(targetIndex);
+    }
+
+    @GetMapping("/get-babelnet-relations/{targetIndex}")
+    public List<String> getBabelNetRelations(@PathVariable int targetIndex) {
+        return apiService.getBabelNetRelations(targetIndex);
+    }
+
+    @GetMapping("/get-quotations")
+    public List<Quotation> getQuotations() {
+        return apiService.getQuotations();
     }
 
     @PostMapping("/annotate")
